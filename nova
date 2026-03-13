@@ -9,6 +9,7 @@ local mouse = player:GetMouse()
 local camera = workspace.CurrentCamera
 local char = player.Character or player.CharacterAdded:Wait()
 
+--- Settings
 local PREFIX = "/"
 local VERSION = "1.4"
 local ADMIN_NAME = "NOVA ADMIN"
@@ -416,6 +417,7 @@ commands["help"] = {
  end
  end
 }
+
 
 commands["fly"] = {
  desc = "Toggle fly mode",
