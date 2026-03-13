@@ -1,0 +1,1649 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local Lighting = game:GetService("Lighting")
+
+local player = Players.LocalPlayer
+local mouse = player:GetMouse()
+local camera = workspace.CurrentCamera
+local char = player.Character or player.CharacterAdded:Wait()
+
+local PREFIX = "/"
+local VERSION = "1.4"
+local ADMIN_NAME = "NOVA ADMIN"
+
+local flying = false
+local noclip = false
+local speedValue = 16
+local jumpValue = 50
+local godmode = false
+local espEnabled = false
+local fullbrightEnabled = false
+local originalAmbient = Lighting.Ambient
+local originalBrightness = Lighting.Brightness
+local espHighlights = {}
+local infiniteJump = false
+local clickTpEnabled = false
+local orbiting = false
+local orbitTarget = nil
+local invisEnabled = false
+local savedTransparencies = {}
+local rainbowEnabled = false
+local rainbowConn = nil
+local frozenSelf = false
+local frozenCFrame = nil
+local loopKillEnabled = false
+local loopKillTarget = nil
+local loopKillConn = nil
+local spinEnabled = false
+local spinConn = nil
+local spinSpeed = 5
+local defaultFOV = 70
+local antiAfkEnabled = false
+local antiAfkConn = nil
+local hitboxEnabled = false
+local originalHitboxSizes = {}
+local savedPositions = {}
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "NovaAdmin"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.Parent = player.PlayerGui
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 500, 0, 340)
+MainFrame.Position = UDim2.new(0.5, -250, 0.5, -170)
+MainFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 18)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Visible = false
+MainFrame.Parent = ScreenGui
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 10)
+MainCorner.Parent = MainFrame
+
+local Stroke = Instance.new("UIStroke")
+Stroke.Color = Color3.fromRGB(99, 102, 241)
+Stroke.Thickness = 1.5
+Stroke.Transparency = 0.3
+Stroke.Parent = MainFrame
+
+local TitleBar = Instance.new("Frame")
+TitleBar.Size = UDim2.new(1, 0, 0, 45)
+TitleBar.BackgroundColor3 = Color3.fromRGB(18, 18, 28)
+TitleBar.BorderSizePixel = 0
+TitleBar.Parent = MainFrame
+
+local TitleCorner = Instance.new("UICorner")
+TitleCorner.CornerRadius = UDim.new(0, 10)
+TitleCorner.Parent = TitleBar
+
+local TitleFix = Instance.new("Frame")
+TitleFix.Size = UDim2.new(1, 0, 0, 10)
+TitleFix.Position = UDim2.new(0, 0, 1, -10)
+TitleFix.BackgroundColor3 = Color3.fromRGB(18, 18, 28)
+TitleFix.BorderSizePixel = 0
+TitleFix.Parent = TitleBar
+
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Size = UDim2.new(1, -50, 1, 0)
+TitleLabel.Position = UDim2.new(0, 15, 0, 0)
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Text = " " .. ADMIN_NAME .. " v" .. VERSION
+TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleLabel.TextSize = 15
+TitleLabel.Font = Enum.Font.GothamBold
+TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+TitleLabel.Parent = TitleBar
+
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0, 30, 0, 30)
+CloseBtn.Position = UDim2.new(1, -40, 0, 7)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(239, 68, 68)
+CloseBtn.Text = ""
+CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseBtn.TextSize = 13
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.BorderSizePixel = 0
+CloseBtn.Parent = TitleBar
+
+local CloseCorner = Instance.new("UICorner")
+CloseCorner.CornerRadius = UDim.new(0, 6)
+CloseCorner.Parent = CloseBtn
+
+CloseBtn.MouseButton1Click:Connect(function()
+ MainFrame.Visible = false
+end)
+
+local CmdBox = Instance.new("TextBox")
+CmdBox.Size = UDim2.new(1, -20, 0, 38)
+CmdBox.Position = UDim2.new(0, 10, 0, 55)
+CmdBox.BackgroundColor3 = Color3.fromRGB(22, 22, 35)
+CmdBox.BorderSizePixel = 0
+CmdBox.Text = ""
+CmdBox.PlaceholderText = " /command args... (e.g. /speed 50)"
+CmdBox.TextColor3 = Color3.fromRGB(200, 200, 220)
+CmdBox.PlaceholderColor3 = Color3.fromRGB(80, 80, 100)
+CmdBox.TextSize = 13
+CmdBox.Font = Enum.Font.Gotham
+CmdBox.TextXAlignment = Enum.TextXAlignment.Left
+CmdBox.ClearTextOnFocus = false
+CmdBox.Parent = MainFrame
+
+local CmdCorner = Instance.new("UICorner")
+CmdCorner.CornerRadius = UDim.new(0, 8)
+CmdCorner.Parent = CmdBox
+
+local CmdStroke = Instance.new("UIStroke")
+CmdStroke.Color = Color3.fromRGB(99, 102, 241)
+CmdStroke.Thickness = 1
+CmdStroke.Parent = CmdBox
+
+local LogFrame = Instance.new("ScrollingFrame")
+LogFrame.Size = UDim2.new(1, -20, 0, 170)
+LogFrame.Position = UDim2.new(0, 10, 0, 103)
+LogFrame.BackgroundColor3 = Color3.fromRGB(16, 16, 24)
+LogFrame.BorderSizePixel = 0
+LogFrame.ScrollBarThickness = 3
+LogFrame.ScrollBarImageColor3 = Color3.fromRGB(99, 102, 241)
+LogFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+LogFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+LogFrame.Parent = MainFrame
+
+local LogCorner = Instance.new("UICorner")
+LogCorner.CornerRadius = UDim.new(0, 8)
+LogCorner.Parent = LogFrame
+
+local LogLayout = Instance.new("UIListLayout")
+LogLayout.SortOrder = Enum.SortOrder.LayoutOrder
+LogLayout.Padding = UDim.new(0, 2)
+LogLayout.Parent = LogFrame
+
+local LogPadding = Instance.new("UIPadding")
+LogPadding.PaddingLeft = UDim.new(0, 8)
+LogPadding.PaddingTop = UDim.new(0, 5)
+LogPadding.Parent = LogFrame
+
+local BottomBar = Instance.new("Frame")
+BottomBar.Size = UDim2.new(1, 0, 0, 30)
+BottomBar.Position = UDim2.new(0, 0, 1, -30)
+BottomBar.BackgroundColor3 = Color3.fromRGB(18, 18, 28)
+BottomBar.BorderSizePixel = 0
+BottomBar.Parent = MainFrame
+
+local BottomCorner = Instance.new("UICorner")
+BottomCorner.CornerRadius = UDim.new(0, 10)
+BottomCorner.Parent = BottomBar
+
+local BottomFix = Instance.new("Frame")
+BottomFix.Size = UDim2.new(1, 0, 0, 10)
+BottomFix.BackgroundColor3 = Color3.fromRGB(18, 18, 28)
+BottomFix.BorderSizePixel = 0
+BottomFix.Parent = BottomBar
+
+local StatusLabel = Instance.new("TextLabel")
+StatusLabel.Size = UDim2.new(1, -10, 1, 0)
+StatusLabel.Position = UDim2.new(0, 10, 0, 0)
+StatusLabel.BackgroundTransparency = 1
+StatusLabel.Text = "Prefix: / | Type /help for commands"
+StatusLabel.TextColor3 = Color3.fromRGB(99, 102, 241)
+StatusLabel.TextSize = 11
+StatusLabel.Font = Enum.Font.Gotham
+StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
+StatusLabel.Parent = BottomBar
+
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Size = UDim2.new(0, 100, 0, 32)
+ToggleBtn.Position = UDim2.new(0, 10, 1, -50)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(99, 102, 241)
+ToggleBtn.Text = " NOVA"
+ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleBtn.TextSize = 13
+ToggleBtn.Font = Enum.Font.GothamBold
+ToggleBtn.BorderSizePixel = 0
+ToggleBtn.Parent = ScreenGui
+
+local ToggleCorner = Instance.new("UICorner")
+ToggleCorner.CornerRadius = UDim.new(0, 8)
+ToggleCorner.Parent = ToggleBtn
+
+ToggleBtn.MouseButton1Click:Connect(function()
+ MainFrame.Visible = not MainFrame.Visible
+end)
+
+local logColors = {
+ info = Color3.fromRGB(147, 197, 253),
+ success = Color3.fromRGB(134, 239, 172),
+ error = Color3.fromRGB(252, 165, 165),
+ warn = Color3.fromRGB(253, 224, 71),
+ system = Color3.fromRGB(192, 132, 252),
+}
+
+local function log(msg, msgType)
+ msgType = msgType or "info"
+ local color = logColors[msgType] or logColors.info
+ local label = Instance.new("TextLabel")
+ label.Size = UDim2.new(1, -5, 0, 18)
+ label.BackgroundTransparency = 1
+ label.Text = msg
+ label.TextColor3 = color
+ label.TextSize = 12
+ label.Font = Enum.Font.Gotham
+ label.TextXAlignment = Enum.TextXAlignment.Left
+ label.TextTruncate = Enum.TextTruncate.AtEnd
+ label.Parent = LogFrame
+ task.wait()
+ LogFrame.CanvasPosition = Vector2.new(0, LogFrame.AbsoluteCanvasSize.Y)
+end
+
+local function notify(title, msg, color)
+ color = color or Color3.fromRGB(99, 102, 241)
+ local notif = Instance.new("Frame")
+ notif.Size = UDim2.new(0, 260, 0, 60)
+ notif.Position = UDim2.new(1, -270, 1, -80)
+ notif.BackgroundColor3 = Color3.fromRGB(12, 12, 18)
+ notif.BorderSizePixel = 0
+ notif.Parent = ScreenGui
+ local nc = Instance.new("UICorner")
+ nc.CornerRadius = UDim.new(0, 8)
+ nc.Parent = notif
+ local ns = Instance.new("UIStroke")
+ ns.Color = color
+ ns.Thickness = 1.5
+ ns.Parent = notif
+ local accent = Instance.new("Frame")
+ accent.Size = UDim2.new(0, 4, 1, 0)
+ accent.BackgroundColor3 = color
+ accent.BorderSizePixel = 0
+ accent.Parent = notif
+ local ac2 = Instance.new("UICorner")
+ ac2.CornerRadius = UDim.new(0, 4)
+ ac2.Parent = accent
+ local titleL = Instance.new("TextLabel")
+ titleL.Size = UDim2.new(1, -15, 0, 25)
+ titleL.Position = UDim2.new(0, 12, 0, 5)
+ titleL.BackgroundTransparency = 1
+ titleL.Text = title
+ titleL.TextColor3 = Color3.fromRGB(255, 255, 255)
+ titleL.TextSize = 13
+ titleL.Font = Enum.Font.GothamBold
+ titleL.TextXAlignment = Enum.TextXAlignment.Left
+ titleL.Parent = notif
+ local msgL = Instance.new("TextLabel")
+ msgL.Size = UDim2.new(1, -15, 0, 20)
+ msgL.Position = UDim2.new(0, 12, 0, 30)
+ msgL.BackgroundTransparency = 1
+ msgL.Text = tostring(msg)
+ msgL.TextColor3 = Color3.fromRGB(180, 180, 200)
+ msgL.TextSize = 11
+ msgL.Font = Enum.Font.Gotham
+ msgL.TextXAlignment = Enum.TextXAlignment.Left
+ msgL.Parent = notif
+ task.delay(3, function()
+ TweenService:Create(notif, TweenInfo.new(0.5), {Position = UDim2.new(1, 10, 1, -80)}):Play()
+ task.wait(0.5)
+ notif:Destroy()
+ end)
+end
+
+local function getPlayer(name)
+ if name == "me" then return player end
+ for _, p in ipairs(Players:GetPlayers()) do
+ if p.Name:lower():find(name:lower()) then return p end
+ end
+ return nil
+end
+
+local function getChar(p) return p and p.Character end
+local function getHRP(p) local c = getChar(p) return c and c:FindFirstChild("HumanoidRootPart") end
+local function getHum(p) local c = getChar(p) return c and c:FindFirstChildOfClass("Humanoid") end
+
+local flyBodyVelocity, flyBodyGyro
+local function startFly()
+ flying = true
+ local c = player.Character
+ local hrp2 = c and c:FindFirstChild("HumanoidRootPart")
+ if not hrp2 then return end
+ flyBodyVelocity = Instance.new("BodyVelocity")
+ flyBodyVelocity.Velocity = Vector3.zero
+ flyBodyVelocity.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+ flyBodyVelocity.Parent = hrp2
+ flyBodyGyro = Instance.new("BodyGyro")
+ flyBodyGyro.MaxTorque = Vector3.new(1e5, 1e5, 1e5)
+ flyBodyGyro.D = 100
+ flyBodyGyro.Parent = hrp2
+ log("Flying enabled (WASD + Space/Shift to go up/down)", "success")
+ notify("Fly", "Enabled", logColors.success)
+ RunService.RenderStepped:Connect(function()
+ if not flying then
+ if flyBodyVelocity then flyBodyVelocity:Destroy() end
+ if flyBodyGyro then flyBodyGyro:Destroy() end
+ return
+ end
+ local dir = Vector3.zero
+ local cf = camera.CFrame
+ if UserInputService:IsKeyDown(Enum.KeyCode.W) then dir = dir + cf.LookVector end
+ if UserInputService:IsKeyDown(Enum.KeyCode.S) then dir = dir - cf.LookVector end
+ if UserInputService:IsKeyDown(Enum.KeyCode.A) then dir = dir - cf.RightVector end
+ if UserInputService:IsKeyDown(Enum.KeyCode.D) then dir = dir + cf.RightVector end
+ if UserInputService:IsKeyDown(Enum.KeyCode.Space) then dir = dir + Vector3.new(0, 1, 0) end
+ if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then dir = dir - Vector3.new(0, 1, 0) end
+ if flyBodyVelocity then flyBodyVelocity.Velocity = dir * speedValue * 2 end
+ if flyBodyGyro then flyBodyGyro.CFrame = cf end
+ end)
+end
+
+local function stopFly()
+ flying = false
+end
+
+local noclipConn
+local function startNoclip()
+ noclip = true
+ noclipConn = RunService.Stepped:Connect(function()
+ if not noclip then noclipConn:Disconnect() return end
+ local c = player.Character
+ if c then
+ for _, part in ipairs(c:GetDescendants()) do
+ if part:IsA("BasePart") then part.CanCollide = false end
+ end
+ end
+ end)
+ log("Noclip enabled", "success")
+ notify("Noclip", "Enabled", logColors.success)
+end
+
+local function stopNoclip()
+ noclip = false
+ if noclipConn then noclipConn:Disconnect() end
+end
+
+local function updateESP()
+ for _, h in pairs(espHighlights) do
+ if h and h.Parent then h:Destroy() end
+ end
+ espHighlights = {}
+ if not espEnabled then return end
+ for _, p in ipairs(Players:GetPlayers()) do
+ if p ~= player and p.Character then
+ local hl = Instance.new("SelectionBox")
+ hl.Color3 = Color3.fromRGB(99, 102, 241)
+ hl.LineThickness = 0.05
+ hl.SurfaceTransparency = 0.8
+ hl.SurfaceColor3 = Color3.fromRGB(99, 102, 241)
+ hl.Adornee = p.Character
+ hl.Parent = ScreenGui
+ table.insert(espHighlights, hl)
+ end
+ end
+end
+
+local function setFullbright(on)
+ fullbrightEnabled = on
+ if on then
+ Lighting.Ambient = Color3.fromRGB(255, 255, 255)
+ Lighting.Brightness = 10
+ Lighting.ClockTime = 14
+ Lighting.FogEnd = 100000
+ log("Fullbright enabled", "success")
+ notify("Fullbright", "Enabled", logColors.success)
+ else
+ Lighting.Ambient = originalAmbient
+ Lighting.Brightness = originalBrightness
+ end
+end
+
+UserInputService.JumpRequest:Connect(function()
+ if infiniteJump then
+ local h = getHum(player)
+ if h then h:ChangeState(Enum.HumanoidStateType.Jumping) end
+ end
+end)
+
+local commands = {}
+
+commands["help"] = {
+ desc = "Show all available commands",
+ func = function(args)
+ log("AVAILABLE COMMANDS","system")
+ for name, data in pairs(commands) do
+ log(PREFIX .. name .. " → " .. data.desc, "info")
+ end
+ end
+}
+
+commands["fly"] = {
+ desc = "Toggle fly mode",
+ func = function(args)
+ if flying then stopFly() else startFly() end
+ end
+}
+
+commands["noclip"] = {
+ desc = "Toggle noclip (walk through walls)",
+ func = function(args)
+ if noclip then stopNoclip() else startNoclip() end
+ end
+}
+
+commands["speed"] = {
+ desc = "Set walk speed (e.g. /speed 50)",
+ func = function(args)
+ local val = tonumber(args[1])
+ if not val then log("Usage: /speed <value>", "error") return end
+ speedValue = val
+ local h = getHum(player)
+ if h then h.WalkSpeed = val end
+ log("Speed → " .. val, "success")
+ notify("Speed", val, logColors.success)
+ end
+}
+
+commands["jump"] = {
+ desc = "Set jump power (e.g. /jump 100)",
+ func = function(args)
+ local val = tonumber(args[1])
+ if not val then log("Usage: /jump <value>", "error") return end
+ jumpValue = val
+ local h = getHum(player)
+ if h then h.JumpPower = val end
+ log("Jump Power → " .. val, "success")
+ notify("Jump Power", val, logColors.success)
+ end
+}
+
+commands["tp"] = {
+ desc = "Teleport to a player (e.g. /tp username)",
+ func = function(args)
+ local target = getPlayer(args[1] or "")
+ if not target then log("Player not found: " .. (args[1] or ""), "error") return end
+ local tHRP = getHRP(target)
+ local myHRP = getHRP(player)
+ if not tHRP or not myHRP then log("Character not found", "error") return end
+ myHRP.CFrame = tHRP.CFrame + Vector3.new(2, 0, 0)
+ log("Teleported to " .. target.Name, "success")
+ notify("Teleport", "→ " .. target.Name, logColors.success)
+ end
+}
+
+commands["tpme"] = {
+ desc = "Teleport a player to you (e.g. /tpme username)",
+ func = function(args)
+ local target = getPlayer(args[1] or "")
+ if not target then log("Player not found", "error") return end
+ local tHRP = getHRP(target)
+ local myHRP = getHRP(player)
+ if not tHRP or not myHRP then return end
+ tHRP.CFrame = myHRP.CFrame + Vector3.new(2, 0, 0)
+ log(target.Name .. " teleported to you", "success")
+ end
+}
+
+commands["goto"] = {
+ desc = "Alias for /tp",
+ func = function(args) commands["tp"].func(args) end
+}
+
+commands["esp"] = {
+ desc = "Toggle ESP (see players through walls)",
+ func = function(args)
+ espEnabled = not espEnabled
+ updateESP()
+ log("ESP " .. (espEnabled and "enabled" or "disabled"), espEnabled and "success" or "warn")
+ notify("ESP", espEnabled and "Enabled" or "Disabled", espEnabled and logColors.success or logColors.warn)
+ end
+}
+
+commands["fullbright"] = {
+ desc = "Toggle fullbright",
+ func = function(args) setFullbright(not fullbrightEnabled) end
+}
+
+commands["god"] = {
+ desc = "Toggle godmode (infinite health)",
+ func = function(args)
+ godmode = not godmode
+ local h = getHum(player)
+ if godmode then
+ if h then h.MaxHealth = math.huge; h.Health = math.huge end
+ log("Godmode enabled", "success")
+ notify("Godmode", "Enabled", logColors.success)
+ else
+ if h then h.MaxHealth = 100; h.Health = 100 end
+ end
+ end
+}
+
+commands["heal"] = {
+ desc = "Heal a player (e.g. /heal me)",
+ func = function(args)
+ local target = getPlayer(args[1] or "me")
+ if not target then log("Player not found", "error") return end
+ local h = getHum(target)
+ if h then h.Health = h.MaxHealth end
+ log(target.Name .. " healed", "success")
+ notify("Heal", target.Name, logColors.success)
+ end
+}
+
+commands["kill"] = {
+ desc = "Kill a player (e.g. /kill username)",
+ func = function(args)
+ local target = getPlayer(args[1] or "me")
+ if not target then log("Player not found", "error") return end
+ local h = getHum(target)
+ if h then h.Health = 0 end
+ log(target.Name .. " killed", "warn")
+ end
+}
+
+commands["infjump"] = {
+ desc = "Toggle infinite jump",
+ func = function(args)
+ infiniteJump = not infiniteJump
+ log("Infinite Jump " .. (infiniteJump and "enabled" or "disabled"), infiniteJump and "success" or "warn")
+ notify("Infinite Jump", infiniteJump and "Enabled" or "Disabled", infiniteJump and logColors.success or logColors.warn)
+ end
+}
+
+commands["invisible"] = {
+ desc = "Make your character invisible",
+ func = function(args)
+ local c = player.Character
+ if not c then return end
+ invisEnabled = true
+ savedTransparencies = {}
+ for _, part in ipairs(c:GetDescendants()) do
+ if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+ savedTransparencies[part] = part.Transparency
+ part.Transparency = 1
+ end
+ if part:IsA("Decal") or part:IsA("SpecialMesh") then
+ savedTransparencies[part] = part.Transparency or 0
+ part.Transparency = 1
+ end
+ end
+ log("Invisible enabled", "success")
+ notify("Invisible", "Enabled", logColors.success)
+ end
+}
+
+commands["uninvisible"] = {
+ desc = "Make your character visible again",
+ func = function(args)
+ local c = player.Character
+ if not c then return end
+ invisEnabled = false
+ for part, trans in pairs(savedTransparencies) do
+ if part and part.Parent then part.Transparency = trans end
+ end
+ savedTransparencies = {}
+ log("Visibility restored", "success")
+ notify("Visible", "Restored", logColors.success)
+ end
+}
+
+commands["invis"] = {
+ desc = "Alias for /invisible",
+ func = function(args) commands["invisible"].func(args) end
+}
+
+commands["uninvis"] = {
+ desc = "Alias for /uninvisible",
+ func = function(args) commands["uninvisible"].func(args) end
+}
+
+commands["semitransparent"] = {
+ desc = "Set character transparency level (e.g. /semitransparent 0.5)",
+ func = function(args)
+ local val = tonumber(args[1]) or 0.5
+ local c = player.Character
+ if not c then return end
+ for _, part in ipairs(c:GetDescendants()) do
+ if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+ part.Transparency = val
+ end
+ end
+ log(string.format("Transparency → %.1f", val), "success")
+ notify("Transparency", val, logColors.success)
+ end
+}
+
+commands["rainbow"] = {
+ desc = "Toggle rainbow color effect on your character",
+ func = function(args)
+ rainbowEnabled = not rainbowEnabled
+ if rainbowEnabled then
+ local hue = 0
+ rainbowConn = RunService.Heartbeat:Connect(function()
+ if not rainbowEnabled then rainbowConn:Disconnect() return end
+ hue = (hue + 0.005) % 1
+ local c = player.Character
+ if c then
+ for _, part in ipairs(c:GetDescendants()) do
+ if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+ part.Color = Color3.fromHSV(hue, 1, 1)
+ end
+ end
+ end
+ end)
+ log("Rainbow enabled", "success")
+ notify("Rainbow", "Enabled", logColors.success)
+ else
+ if rainbowConn then rainbowConn:Disconnect() end
+ end
+ end
+}
+
+commands["color"] = {
+ desc = "Set character color (e.g. /color 255 0 0)",
+ func = function(args)
+ local r, g, b = tonumber(args[1]) or 255, tonumber(args[2]) or 255, tonumber(args[3]) or 255
+ local c = player.Character
+ if not c then return end
+ for _, part in ipairs(c:GetDescendants()) do
+ if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+ part.Color = Color3.fromRGB(r, g, b)
+ end
+ end
+ log(string.format("Color → %d, %d, %d", r, g, b), "success")
+ notify("Color", r..","..g..","..b, logColors.success)
+ end
+}
+
+commands["spin"] = {
+ desc = "Toggle spin rotation (e.g. /spin 10)",
+ func = function(args)
+ local speed = tonumber(args[1]) or spinSpeed
+ spinSpeed = speed
+ spinEnabled = not spinEnabled
+ if spinEnabled then
+ spinConn = RunService.Heartbeat:Connect(function()
+ if not spinEnabled then spinConn:Disconnect() return end
+ local hrp2 = getHRP(player)
+ if hrp2 then hrp2.CFrame = hrp2.CFrame * CFrame.Angles(0, math.rad(spinSpeed), 0) end
+ end)
+ log("Spin enabled (speed: " .. spinSpeed .. ")", "success")
+ notify("Spin", "Enabled", logColors.success)
+ else
+ if spinConn then spinConn:Disconnect() end
+ end
+ end
+}
+
+commands["freeze"] = {
+ desc = "Toggle freeze your character in place",
+ func = function(args)
+ frozenSelf = not frozenSelf
+ local hrp2 = getHRP(player)
+ if frozenSelf then
+ if hrp2 then frozenCFrame = hrp2.CFrame; hrp2.Anchored = true end
+ log("Freeze enabled", "success")
+ notify("Freeze", "Enabled", logColors.success)
+ else
+ if hrp2 then hrp2.Anchored = false end
+ end
+ end
+}
+
+commands["fov"] = {
+ desc = "Set field of view (e.g. /fov 100)",
+ func = function(args)
+ local val = tonumber(args[1]) or 70
+ camera.FieldOfView = val
+ log("FOV → " .. val, "success")
+ notify("FOV", val, logColors.success)
+ end
+}
+
+commands["resetfov"] = {
+ desc = "Reset FOV to default",
+ func = function(args)
+ camera.FieldOfView = defaultFOV
+ log("FOV reset to " .. defaultFOV, "success")
+ notify("FOV", "Reset", logColors.success)
+ end
+}
+
+commands["zoom"] = {
+ desc = "Set camera zoom distance (e.g. /zoom 5)",
+ func = function(args)
+ local val = tonumber(args[1]) or 5
+ player.CameraMaxZoomDistance = val
+ player.CameraMinZoomDistance = val
+ log("Zoom → " .. val, "success")
+ notify("Zoom", val, logColors.success)
+ end
+}
+
+commands["unzoom"] = {
+ desc = "Reset camera zoom to default",
+ func = function(args)
+ player.CameraMaxZoomDistance = 400
+ player.CameraMinZoomDistance = 0.5
+ log("Zoom reset", "success")
+ end
+}
+
+commands["antiafk"] = {
+ desc = "Toggle anti-AFK",
+ func = function(args)
+ antiAfkEnabled = not antiAfkEnabled
+ if antiAfkEnabled then
+ antiAfkConn = RunService.Heartbeat:Connect(function()
+ if not antiAfkEnabled then antiAfkConn:Disconnect() return end
+ local via = game:GetService("VirtualUser")
+ if via then via:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame) end
+ end)
+ log("Anti-AFK enabled", "success")
+ notify("Anti-AFK", "Enabled", logColors.success)
+ else
+ if antiAfkConn then antiAfkConn:Disconnect() end
+ end
+ end
+}
+
+commands["savepos"] = {
+ desc = "Save your current position (e.g. /savepos spawn)",
+ func = function(args)
+ local name = args[1] or "default"
+ local hrp2 = getHRP(player)
+ if hrp2 then
+ savedPositions[name] = hrp2.CFrame
+ log("Position '" .. name .. "' saved", "success")
+ notify("SavePos", "'" .. name .. "' saved", logColors.success)
+ end
+ end
+}
+
+commands["loadpos"] = {
+ desc = "Teleport to a saved position (e.g. /loadpos spawn)",
+ func = function(args)
+ local name = args[1] or "default"
+ local hrp2 = getHRP(player)
+ if savedPositions[name] and hrp2 then
+ hrp2.CFrame = savedPositions[name]
+ log("Position '" .. name .. "' loaded", "success")
+ notify("LoadPos", "→ '" .. name .. "'", logColors.success)
+ else
+ log("Position '" .. name .. "' not found", "error")
+ end
+ end
+}
+
+commands["listpos"] = {
+ desc = "List all saved positions",
+ func = function(args)
+ log("SAVED POSITIONS","system")
+ local count = 0
+ for name, cf in pairs(savedPositions) do
+ count = count + 1
+ log(string.format(" %s → %.1f, %.1f, %.1f", name, cf.X, cf.Y, cf.Z), "info")
+ end
+ if count == 0 then log("No saved positions", "warn") end
+ end
+}
+
+commands["loopkill"] = {
+ desc = "Loop kill a player (e.g. /loopkill username — no arg to stop)",
+ func = function(args)
+ if not args[1] then
+ loopKillEnabled = false
+ if loopKillConn then loopKillConn:Disconnect() end
+ return
+ end
+ local target = getPlayer(args[1])
+ if not target then log("Player not found: " .. args[1], "error") return end
+ loopKillEnabled = true
+ loopKillTarget = target
+ loopKillConn = RunService.Heartbeat:Connect(function()
+ if not loopKillEnabled then loopKillConn:Disconnect() return end
+ local h = getHum(loopKillTarget)
+ if h then h.Health = 0 end
+ end)
+ log("Loop Kill → " .. target.Name, "success")
+ notify("Loop Kill", "→ " .. target.Name, logColors.warn)
+ end
+}
+
+commands["stoploopkill"] = {
+ desc = "Stop loop kill",
+ func = function(args)
+ loopKillEnabled = false
+ if loopKillConn then loopKillConn:Disconnect() end
+ end
+}
+
+commands["hitbox"] = {
+ desc = "Toggle expanded player hitboxes (e.g. /hitbox 10)",
+ func = function(args)
+ local size = tonumber(args[1]) or 10
+ hitboxEnabled = not hitboxEnabled
+ if hitboxEnabled then
+ for _, p2 in ipairs(Players:GetPlayers()) do
+ if p2 ~= player and p2.Character then
+ local hrp2 = p2.Character:FindFirstChild("HumanoidRootPart")
+ if hrp2 then
+ originalHitboxSizes[p2.Name] = hrp2.Size
+ hrp2.Size = Vector3.new(size, size, size)
+ hrp2.Transparency = 0.8
+ end
+ end
+ end
+ log("Hitbox expanded → " .. size, "success")
+ notify("Hitbox", "Expanded x" .. size, logColors.success)
+ else
+ for _, p2 in ipairs(Players:GetPlayers()) do
+ if p2 ~= player and p2.Character then
+ local hrp2 = p2.Character:FindFirstChild("HumanoidRootPart")
+ if hrp2 and originalHitboxSizes[p2.Name] then
+ hrp2.Size = originalHitboxSizes[p2.Name]
+ hrp2.Transparency = 1
+ end
+ end
+ end
+ end
+ end
+}
+
+commands["follow"] = {
+ desc = "Follow a player (e.g. /follow username)",
+ func = function(args)
+ if not args[1] then
+ orbiting = false
+ return
+ end
+ local target = getPlayer(args[1])
+ if not target then log("Player not found", "error") return end
+ orbiting = true
+ orbitTarget = target
+ RunService.Heartbeat:Connect(function()
+ if not orbiting then return end
+ local tHRP = getHRP(orbitTarget)
+ local myHRP = getHRP(player)
+ if tHRP and myHRP then myHRP.CFrame = tHRP.CFrame + Vector3.new(3, 0, 0) end
+ end)
+ log("Following → " .. target.Name, "success")
+ notify("Follow", "→ " .. target.Name, logColors.success)
+ end
+}
+
+commands["unfollow"] = {
+ desc = "Stop following",
+ func = function(args)
+ orbiting = false
+ orbitTarget = nil
+ end
+}
+
+commands["headless"] = {
+ desc = "Hide your character's head",
+ func = function(args)
+ local c = player.Character
+ if not c then return end
+ local head = c:FindFirstChild("Head")
+ if head then
+ head.Transparency = 1
+ local face = head:FindFirstChild("face")
+ if face then face.Transparency = 1 end
+ end
+ log("Headless enabled", "success")
+ notify("Headless", "Enabled", logColors.success)
+ end
+}
+
+commands["unheadless"] = {
+ desc = "Restore your character's head",
+ func = function(args)
+ local c = player.Character
+ if not c then return end
+ local head = c:FindFirstChild("Head")
+ if head then
+ head.Transparency = 0
+ local face = head:FindFirstChild("face")
+ if face then face.Transparency = 0 end
+ end
+ log("Head restored", "success")
+ end
+}
+
+commands["nolimbs"] = {
+ desc = "Hide all character limbs",
+ func = function(args)
+ local c = player.Character
+ if not c then return end
+ local limbs = {"Left Arm","Right Arm","Left Leg","Right Leg","LeftUpperArm","RightUpperArm","LeftUpperLeg","RightUpperLeg","LeftLowerArm","RightLowerArm","LeftLowerLeg","RightLowerLeg","LeftHand","RightHand","LeftFoot","RightFoot"}
+ for _, name in ipairs(limbs) do
+ local part = c:FindFirstChild(name)
+ if part then part.Transparency = 1 end
+ end
+ log("Limbs hidden", "success")
+ notify("No Limbs", "Enabled", logColors.success)
+ end
+}
+
+commands["noeffects"] = {
+ desc = "Disable all Lighting effects and fog",
+ func = function(args)
+ for _, effect in ipairs(Lighting:GetChildren()) do
+ if effect:IsA("PostEffect") or effect:IsA("Sky") or effect:IsA("Atmosphere") then
+ effect.Enabled = false
+ end
+ end
+ Lighting.FogEnd = 100000
+ Lighting.FogStart = 100000
+ log("All Lighting effects disabled", "success")
+ notify("Effects", "Disabled", logColors.success)
+ end
+}
+
+commands["platform"] = {
+ desc = "Spawn a platform under your feet (auto-destroys in 10s)",
+ func = function(args)
+ local hrp2 = getHRP(player)
+ if not hrp2 then return end
+ local platform = Instance.new("Part")
+ platform.Size = Vector3.new(10, 1, 10)
+ platform.Position = hrp2.Position - Vector3.new(0, 3, 0)
+ platform.Anchored = true
+ platform.BrickColor = BrickColor.new("Bright blue")
+ platform.Material = Enum.Material.SmoothPlastic
+ platform.Parent = workspace
+ log("Platform spawned!", "success")
+ notify("Platform", "Spawned", logColors.success)
+ task.delay(10, function()
+ if platform and platform.Parent then platform:Destroy() end
+ end)
+ end
+}
+
+commands["gravity"] = {
+ desc = "Set gravity (e.g. /gravity 10, default 196.2)",
+ func = function(args)
+ local val = tonumber(args[1]) or 196.2
+ workspace.Gravity = val
+ log("Gravity → " .. val, "success")
+ notify("Gravity", val, logColors.success)
+ end
+}
+
+commands["zerogravity"] = {
+ desc = "Set gravity to zero",
+ func = function(args)
+ workspace.Gravity = 0
+ log("Zero gravity enabled", "success")
+ notify("Gravity", "Zero", logColors.success)
+ end
+}
+
+commands["resetgravity"] = {
+ desc = "Reset gravity to default (196.2)",
+ func = function(args)
+ workspace.Gravity = 196.2
+ log("Gravity reset", "success")
+ notify("Gravity", "Reset", logColors.success)
+ end
+}
+
+commands["maxhealth"] = {
+ desc = "Set max health (e.g. /maxhealth 500)",
+ func = function(args)
+ local val = tonumber(args[1]) or 100
+ local h = getHum(player)
+ if h then h.MaxHealth = val; h.Health = val end
+ log("Max Health → " .. val, "success")
+ notify("Max Health", val, logColors.success)
+ end
+}
+
+commands["sethealth"] = {
+ desc = "Set exact health value (e.g. /sethealth 50)",
+ func = function(args)
+ local val = tonumber(args[1]) or 100
+ local h = getHum(player)
+ if h then h.Health = val end
+ log("Health → " .. val, "success")
+ notify("Health", val, logColors.success)
+ end
+}
+
+commands["tool"] = {
+ desc = "Equip a tool from backpack (e.g. /tool Sword)",
+ func = function(args)
+ local toolName = args[1]
+ if not toolName then log("Usage: /tool <name>", "error") return end
+ local backpack = player:FindFirstChild("Backpack")
+ if backpack then
+ local tool = backpack:FindFirstChild(toolName)
+ if tool then
+ tool.Parent = player.Character
+ log("Tool equipped: " .. toolName, "success")
+ notify("Tool", toolName .. " equipped", logColors.success)
+ else
+ log("Tool '" .. toolName .. "' not found", "error")
+ end
+ end
+ end
+}
+
+commands["droptool"] = {
+ desc = "Drop your currently held tool",
+ func = function(args)
+ local c = player.Character
+ if not c then return end
+ for _, tool in ipairs(c:GetChildren()) do
+ if tool:IsA("Tool") then
+ tool.Parent = player.Backpack
+ log("Tool dropped: " .. tool.Name, "success")
+ end
+ end
+ end
+}
+
+commands["nametag"] = {
+ desc = "Set a custom nametag (e.g. /nametag [ADMIN])",
+ func = function(args)
+ local text = table.concat(args, " ")
+ local billboard = Instance.new("BillboardGui")
+ billboard.Size = UDim2.new(0, 200, 0, 50)
+ billboard.StudsOffset = Vector3.new(0, 3, 0)
+ billboard.AlwaysOnTop = true
+ local label = Instance.new("TextLabel")
+ label.Size = UDim2.new(1, 0, 1, 0)
+ label.BackgroundTransparency = 1
+ label.Text = text
+ label.TextColor3 = Color3.fromRGB(99, 102, 241)
+ label.TextSize = 16
+ label.Font = Enum.Font.GothamBold
+ label.TextStrokeTransparency = 0
+ label.Parent = billboard
+ local hrp2 = getHRP(player)
+ if hrp2 then billboard.Parent = hrp2 end
+ log("Nametag → " .. text, "success")
+ notify("Nametag", text, logColors.success)
+ end
+}
+
+commands["removenametag"] = {
+ desc = "Remove custom nametag",
+ func = function(args)
+ local hrp2 = getHRP(player)
+ if hrp2 then
+ for _, bb in ipairs(hrp2:GetChildren()) do
+ if bb:IsA("BillboardGui") then bb:Destroy() end
+ end
+ end
+ end
+}
+
+commands["glow"] = {
+ desc = "Add a glow effect to your character (e.g. /glow 255 100 0)",
+ func = function(args)
+ local r, g, b = tonumber(args[1]) or 99, tonumber(args[2]) or 102, tonumber(args[3]) or 241
+ local c = player.Character
+ if not c then return end
+ for _, part in ipairs(c:GetDescendants()) do
+ if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+ local light = part:FindFirstChildOfClass("PointLight") or Instance.new("PointLight")
+ light.Brightness = 5
+ light.Range = 16
+ light.Color = Color3.fromRGB(r, g, b)
+ light.Parent = part
+ end
+ end
+ log(string.format("Glow → %d, %d, %d", r, g, b), "success")
+ notify("Glow", "Enabled", logColors.success)
+ end
+}
+
+commands["unglow"] = {
+ desc = "Remove glow effect",
+ func = function(args)
+ local c = player.Character
+ if not c then return end
+ for _, part in ipairs(c:GetDescendants()) do
+ if part:IsA("PointLight") then part:Destroy() end
+ end
+ end
+}
+
+commands["forcefield"] = {
+ desc = "Toggle forcefield visual",
+ func = function(args)
+ local c = player.Character
+ if not c then return end
+ local existing = c:FindFirstChildOfClass("ForceField")
+ if existing then
+ existing:Destroy()
+ else
+ Instance.new("ForceField").Parent = c
+ log("Forcefield enabled", "success")
+ notify("Forcefield", "Enabled", logColors.success)
+ end
+ end
+}
+
+commands["listparts"] = {
+ desc = "List workspace parts with their transparency",
+ func = function(args)
+ log("WORKSPACE PARTS","system")
+ local count = 0
+ for _, obj in ipairs(workspace:GetDescendants()) do
+ if obj:IsA("BasePart") and count < 20 then
+ count = count + 1
+ log(string.format(" %s | Trans: %.1f | Anchored: %s", obj.Name, obj.Transparency, tostring(obj.Anchored)), "info")
+ end
+ end
+ if count == 0 then log("No parts found", "warn") end
+ end
+}
+
+commands["deletepart"] = {
+ desc = "Delete the part you are pointing at",
+ func = function(args)
+ local target = mouse.Target
+ if target then
+ log("Deleted: " .. target.Name, "warn")
+ target:Destroy()
+ notify("Delete", target.Name .. " deleted", logColors.warn)
+ else
+ log("No part targeted", "error")
+ end
+ end
+}
+
+commands["anchorpart"] = {
+ desc = "Toggle anchor on the targeted part",
+ func = function(args)
+ local target = mouse.Target
+ if target and target:IsA("BasePart") then
+ target.Anchored = not target.Anchored
+ log(target.Name .. " Anchored: " .. tostring(target.Anchored), "success")
+ notify("Anchor", target.Name, logColors.success)
+ else
+ log("No BasePart targeted", "error")
+ end
+ end
+}
+
+commands["copypart"] = {
+ desc = "Clone the part you are pointing at",
+ func = function(args)
+ local target = mouse.Target
+ if target and target:IsA("BasePart") then
+ local clone = target:Clone()
+ clone.Position = target.Position + Vector3.new(2, 0, 0)
+ clone.Parent = workspace
+ log("Copied: " .. target.Name, "success")
+ notify("Copy", target.Name .. " copied", logColors.success)
+ else
+ log("No part targeted", "error")
+ end
+ end
+}
+
+commands["partcolor"] = {
+ desc = "Set targeted part color (e.g. /partcolor 255 0 0)",
+ func = function(args)
+ local target = mouse.Target
+ if not target or not target:IsA("BasePart") then log("No BasePart targeted", "error") return end
+ local r, g, b = tonumber(args[1]) or 255, tonumber(args[2]) or 0, tonumber(args[3]) or 0
+ target.Color = Color3.fromRGB(r, g, b)
+ log(string.format(" %s color → %d,%d,%d", target.Name, r, g, b), "success")
+ notify("Part Color", target.Name, logColors.success)
+ end
+}
+
+commands["addlight"] = {
+ desc = "Add a point light to targeted part (e.g. /addlight 20 5)",
+ func = function(args)
+ local target = mouse.Target
+ if not target or not target:IsA("BasePart") then log("No BasePart targeted", "error") return end
+ local range = tonumber(args[1]) or 20
+ local brightness = tonumber(args[2]) or 5
+ local pl = Instance.new("PointLight")
+ pl.Range = range
+ pl.Brightness = brightness
+ pl.Parent = target
+ log("Light added to " .. target.Name, "success")
+ notify("Light", "Added", logColors.success)
+ end
+}
+
+commands["music"] = {
+ desc = "Play a Roblox sound by ID (e.g. /music 1234567)",
+ func = function(args)
+ local id = tonumber(args[1])
+ if not id then log("Usage: /music <SoundID>", "error") return end
+ local sound = workspace:FindFirstChild("NovaMusic") or Instance.new("Sound")
+ sound.Name = "NovaMusic"
+ sound.SoundId = "rbxassetid://" .. id
+ sound.Volume = 0.5
+ sound.Looped = true
+ sound.Parent = workspace
+ sound:Play()
+ log("Music playing: " .. id, "success")
+ notify("Music", "ID: " .. id, logColors.success)
+ end
+}
+
+commands["stopmusic"] = {
+ desc = "Stop the currently playing music",
+ func = function(args)
+ local sound = workspace:FindFirstChild("NovaMusic")
+ if sound then sound:Stop() end
+ end
+}
+
+commands["volume"] = {
+ desc = "Set music volume (e.g. /volume 0.8)",
+ func = function(args)
+ local val = tonumber(args[1]) or 0.5
+ local sound = workspace:FindFirstChild("NovaMusic")
+ if sound then sound.Volume = val end
+ log("Volume → " .. val, "success")
+ end
+}
+
+commands["jumpto"] = {
+ desc = "Jump above a player (e.g. /jumpto username)",
+ func = function(args)
+ local target = getPlayer(args[1] or "")
+ if not target then log("Player not found", "error") return end
+ local tHRP = getHRP(target)
+ local myHRP = getHRP(player)
+ if tHRP and myHRP then
+ myHRP.CFrame = tHRP.CFrame + Vector3.new(0, 20, 0)
+ log("Jumped to " .. target.Name, "success")
+ notify("JumpTo", "→ " .. target.Name, logColors.success)
+ end
+ end
+}
+
+commands["ping"] = {
+ desc = "Show your current ping",
+ func = function(args)
+ local stats = game:GetService("Stats")
+ local ping = stats.Network.ServerStatsItem["Data Ping"]:GetValue()
+ log(string.format(" Ping: %.0f ms", ping), "info")
+ notify("Ping", string.format("%.0f ms", ping), logColors.info)
+ end
+}
+
+commands["fps"] = {
+ desc = "Show current FPS",
+ func = function(args)
+ local fps = math.floor(1 / RunService.RenderStepped:Wait())
+ log("FPS: " .. fps, "info")
+ notify("FPS", fps, logColors.info)
+ end
+}
+
+commands["info"] = {
+ desc = "Show player info (e.g. /info username)",
+ func = function(args)
+ local target = getPlayer(args[1] or player.Name)
+ if not target then log("Player not found", "error") return end
+ log("INFO: " .. target.Name .. " ","system")
+ log("Name: " .. target.Name, "info")
+ log("UserID: " .. target.UserId, "info")
+ log("Account Age: " .. target.AccountAge .. " days", "info")
+ local h = getHum(target)
+ local hrp2 = getHRP(target)
+ if h then log("Health: " .. math.floor(h.Health) .. "/" .. h.MaxHealth, "info") end
+ if hrp2 then
+ local p = hrp2.Position
+ log(string.format(" Pos: %.1f, %.1f, %.1f", p.X, p.Y, p.Z), "info")
+ end
+ end
+}
+
+commands["animation"] = {
+ desc = "Play an animation by ID (e.g. /animation 507770239)",
+ func = function(args)
+ local id = args[1]
+ if not id then log("Usage: /animation <AnimID>", "error") return end
+ local h = getHum(player)
+ if not h then return end
+ local anim = Instance.new("Animation")
+ anim.AnimationId = "rbxassetid://" .. id
+ local track = h:LoadAnimation(anim)
+ track:Play()
+ log("Animation playing: " .. id, "success")
+ notify("Animation", "ID: " .. id, logColors.success)
+ end
+}
+
+commands["stopanimation"] = {
+ desc = "Stop all playing animations",
+ func = function(args)
+ local h = getHum(player)
+ if not h then return end
+ for _, track in ipairs(h:GetPlayingAnimationTracks()) do
+ track:Stop()
+ end
+ end
+}
+
+commands["hidehat"] = {
+ desc = "Hide all accessories",
+ func = function(args)
+ local c = player.Character
+ if not c then return end
+ for _, acc in ipairs(c:GetChildren()) do
+ if acc:IsA("Accessory") then
+ local handle = acc:FindFirstChild("Handle")
+ if handle then handle.Transparency = 1 end
+ end
+ end
+ log("Accessories hidden", "success")
+ notify("Accessories", "Hidden", logColors.success)
+ end
+}
+
+commands["showhat"] = {
+ desc = "Show all accessories",
+ func = function(args)
+ local c = player.Character
+ if not c then return end
+ for _, acc in ipairs(c:GetChildren()) do
+ if acc:IsA("Accessory") then
+ local handle = acc:FindFirstChild("Handle")
+ if handle then handle.Transparency = 0 end
+ end
+ end
+ log("Accessories restored", "success")
+ end
+}
+
+commands["size"] = {
+ desc = "Set character size (e.g. /size 2)",
+ func = function(args)
+ local val = tonumber(args[1])
+ if not val then log("Usage: /size <value>", "error") return end
+ local h = getHum(player)
+ if h then
+ h.BodyDepthScale.Value = val
+ h.BodyHeightScale.Value = val
+ h.BodyWidthScale.Value = val
+ h.HeadScale.Value = val
+ end
+ log("Size → " .. val, "success")
+ notify("Size", "x" .. val, logColors.success)
+ end
+}
+
+commands["reset"] = {
+ desc = "Reset your character",
+ func = function(args)
+ local h = getHum(player)
+ if h then h.Health = 0 end
+ end
+}
+
+commands["respawn"] = {
+ desc = "Respawn your character",
+ func = function(args)
+ player:LoadCharacter()
+ log("Respawned", "success")
+ end
+}
+
+commands["time"] = {
+ desc = "Set the time of day (e.g. /time 14)",
+ func = function(args)
+ local val = tonumber(args[1])
+ if not val then log("Usage: /time <0-24>", "error") return end
+ Lighting.ClockTime = val
+ log("Time → " .. val .. "h", "success")
+ notify("Time", val .. "h", logColors.success)
+ end
+}
+
+commands["day"] = {
+ desc = "Set daytime",
+ func = function(args)
+ Lighting.ClockTime = 14
+ log("Daytime", "success")
+ notify("Time", "Day", logColors.success)
+ end
+}
+
+commands["night"] = {
+ desc = "Set nighttime",
+ func = function(args)
+ Lighting.ClockTime = 0
+ log("Nighttime", "success")
+ notify("Time", "Night", logColors.success)
+ end
+}
+
+commands["fogoff"] = {
+ desc = "Remove fog",
+ func = function(args)
+ Lighting.FogEnd = 100000
+ Lighting.FogStart = 100000
+ log("Fog removed", "success")
+ notify("Fog", "Removed", logColors.success)
+ end
+}
+
+commands["ambient"] = {
+ desc = "Set ambient lighting (e.g. /ambient 128 128 255)",
+ func = function(args)
+ local r, g, b = tonumber(args[1]) or 128, tonumber(args[2]) or 128, tonumber(args[3]) or 128
+ Lighting.Ambient = Color3.fromRGB(r, g, b)
+ log(string.format("Ambient → %d, %d, %d", r, g, b), "success")
+ end
+}
+
+commands["sit"] = {
+ desc = "Force your character to sit",
+ func = function(args)
+ local h = getHum(player)
+ if h then h.Sit = true end
+ log("Sitting", "info")
+ end
+}
+
+commands["unsit"] = {
+ desc = "Stand up your character",
+ func = function(args)
+ local h = getHum(player)
+ if h then h.Sit = false end
+ log("Standing", "info")
+ end
+}
+
+commands["tppos"] = {
+ desc = "Teleport to coordinates (e.g. /tppos 0 50 0)",
+ func = function(args)
+ local x, y, z = tonumber(args[1]), tonumber(args[2]), tonumber(args[3])
+ if not (x and y and z) then log("Usage: /tppos <x> <y> <z>", "error") return end
+ local myHRP = getHRP(player)
+ if myHRP then
+ myHRP.CFrame = CFrame.new(x, y, z)
+ log("Teleported to " .. x .. ", " .. y .. ", " .. z, "success")
+ notify("TP Position", x..","..y..","..z, logColors.success)
+ end
+ end
+}
+
+commands["pos"] = {
+ desc = "Show your current position",
+ func = function(args)
+ local myHRP = getHRP(player)
+ if myHRP then
+ local p = myHRP.Position
+ log(string.format(" Position: X=%.1f Y=%.1f Z=%.1f", p.X, p.Y, p.Z), "info")
+ end
+ end
+}
+
+commands["players"] = {
+ desc = "List all players in the server",
+ func = function(args)
+ log("PLAYERS ONLINE (" .. #Players:GetPlayers() .. ") ","system")
+ for _, p2 in ipairs(Players:GetPlayers()) do
+ log(p2.Name .. " (ID: " .. p2.UserId .. ")", "info")
+ end
+ end
+}
+
+commands["clicktp"] = {
+ desc = "Toggle click-to-teleport",
+ func = function(args)
+ clickTpEnabled = not clickTpEnabled
+ log("Click TP " .. (clickTpEnabled and "enabled" or "disabled"), clickTpEnabled and "success" or "warn")
+ notify("Click TP", clickTpEnabled and "Enabled" or "Disabled", clickTpEnabled and logColors.success or logColors.warn)
+ end
+}
+
+commands["prefix"] = {
+ desc = "Change the command prefix (e.g. /prefix !)",
+ func = function(args)
+ if not args[1] then log("Usage: /prefix <symbol>", "error") return end
+ PREFIX = args[1]
+ StatusLabel.Text = "Prefix: " .. PREFIX .. " | Type " .. PREFIX .. "help for commands"
+ log("Prefix changed → " .. PREFIX, "success")
+ notify("Prefix", "→ " .. PREFIX, logColors.success)
+ end
+}
+
+commands["infspeed"] = {
+ desc = "Toggle infinite speed",
+ func = function(args)
+ local h = getHum(player)
+ if h then
+ if h.WalkSpeed > 500 then
+ h.WalkSpeed = 16
+ else
+ h.WalkSpeed = 9999
+ log("Infinite speed enabled", "success")
+ notify("Infinite Speed", "Enabled", logColors.success)
+ end
+ end
+ end
+}
+
+commands["explore"] = {
+ desc = "Highlight invisible parts in the workspace",
+ func = function(args)
+ local count = 0
+ for _, obj in ipairs(workspace:GetDescendants()) do
+ if obj:IsA("BasePart") and obj.Transparency >= 0.9 then
+ count = count + 1
+ obj.Transparency = 0.5
+ obj.BrickColor = BrickColor.new("Bright red")
+ end
+ end
+ log(count .. " invisible parts found and highlighted", "success")
+ notify("Explore", count .. " parts found", logColors.success)
+ end
+}
+
+commands["wireframe"] = {
+ desc = "Make all workspace parts semi-transparent",
+ func = function(args)
+ for _, obj in ipairs(workspace:GetDescendants()) do
+ if obj:IsA("BasePart") then obj.Transparency = 0.8 end
+ end
+ log("Wireframe enabled", "success")
+ end
+}
+
+commands["version"] = {
+ desc = "Show script version",
+ func = function(args)
+ log(ADMIN_NAME .. " version " .. VERSION,"system")
+ end
+}
+
+commands["clear"] = {
+ desc = "Clear the log",
+ func = function(args)
+ for _, child in ipairs(LogFrame:GetChildren()) do
+ if child:IsA("TextLabel") then child:Destroy() end
+ end
+ log("Log cleared","system")
+ end
+}
+
+
+commands["rejoin"] = {
+ desc = "Rejoin the current game",
+ func = function(args)
+ log("Rejoining...", "system")
+ local TeleportService = game:GetService("TeleportService")
+ TeleportService:Teleport(game.PlaceId, player)
+ end
+}
+
+local function executeCommand(input)
+ input = input:match("^%s*(.-)%s*$")
+ if input == "" or input:sub(1, #PREFIX) ~= PREFIX then return end
+ local content = input:sub(#PREFIX + 1)
+ local parts = {}
+ for word in content:gmatch("%S+") do
+ table.insert(parts, word)
+ end
+ if #parts == 0 then return end
+ local cmdName = parts[1]:lower()
+ local args = {}
+ for i = 2, #parts do table.insert(args, parts[i]) end
+ if commands[cmdName] then
+ log("> " .. input,"system")
+ local ok, err = pcall(commands[cmdName].func, args)
+ if not ok then
+ log("Error: " .. tostring(err), "error")
+ end
+ else
+ log("Unknown command: " .. cmdName .. " (type /help)", "error")
+ end
+end
+
+CmdBox.FocusLost:Connect(function(entered)
+ if entered then
+ executeCommand(CmdBox.Text)
+ CmdBox.Text = ""
+ end
+end)
+
+player.Chatted:Connect(function(msg)
+ if msg:sub(1, #PREFIX) == PREFIX then
+ executeCommand(msg)
+ end
+end)
+
+mouse.Button1Down:Connect(function()
+ if clickTpEnabled then
+ local target = mouse.Hit
+ if target then
+ local myHRP = getHRP(player)
+ if myHRP then myHRP.CFrame = target + Vector3.new(0, 3, 0) end
+ end
+ end
+end)
+
+RunService.Heartbeat:Connect(function()
+ if espEnabled then
+ for _, hl in pairs(espHighlights) do
+ if not hl.Parent then
+ updateESP()
+ break
+ end
+ end
+ end
+end)
+
+log(ADMIN_NAME .. " v" .. VERSION .. " loaded!","system")
+log("Type /help to see all commands", "info")
+log("Tip: you can also type commands directly in chat", "info")
+notify(ADMIN_NAME, "Loaded! Type /help", Color3.fromRGB(99, 102, 241))
+
+MainFrame.Visible = true
