@@ -1,3 +1,5 @@
+
+
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -9,7 +11,8 @@ local mouse = player:GetMouse()
 local camera = workspace.CurrentCamera
 local char = player.Character or player.CharacterAdded:Wait()
 
---- Settings
+--- Settings do not change
+local OWNER = "SuPraa006"
 local PREFIX = "/"
 local VERSION = "1.4"
 local ADMIN_NAME = "NOVA ADMIN"
@@ -1645,7 +1648,9 @@ end)
 
 log(ADMIN_NAME .. " v" .. VERSION .. " loaded!","system")
 log("Type /help to see all commands", "info")
+log("Script was made by " .. OWNER ..  " Enjoy")
 log("Tip: you can also type commands directly in chat", "info")
 notify(ADMIN_NAME, "Loaded! Type /help", Color3.fromRGB(99, 102, 241))
+notify(ADMIN_NAME, "Was made by " .. OWNER .. ", thanks for using")
 
 MainFrame.Visible = true
