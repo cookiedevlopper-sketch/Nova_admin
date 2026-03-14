@@ -1,4 +1,4 @@
-
+--- protected by MIT License. all right reserved, Each copy will be punished by law.
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
